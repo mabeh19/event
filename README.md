@@ -17,12 +17,12 @@ main :: proc()
     @static x := 0
 
     // Create event with and without data
-    my_event_with_data := new(^int, "Event With Data")
-    my_event_without_data := new("Event Without Data")
+    my_event_with_data := ev.new(^int, "Event With Data")
+    my_event_without_data := ev.new("Event Without Data")
     
     // All dynamic allocations can be freed using clear
-    defer clear(&my_event_with_data)
-    defer clear(&my_event_without_data)
+    defer ev.clear(&my_event_with_data)
+    defer ev.clear(&my_event_without_data)
 
     // Add dynamically allocated listener
     ev.listen(&my_event_with_data, proc(x_ptr: ^int) {
