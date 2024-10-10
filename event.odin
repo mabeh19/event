@@ -25,6 +25,7 @@ None :: distinct struct {}
 
 
 new :: proc {new_no_data, new_poly_data}
+new_sub :: proc {new_sub_no_data, new_sub_poly_data}
 listen :: proc {listen_dynamic, listen_static, listen_dynamic_no_data, listen_static_no_data}
 signal :: proc {signal_poly_data, signal_no_data}
 
@@ -87,6 +88,16 @@ new_no_data :: proc(name: string) -> Event(None)
     }
 }
 
+new_sub_no_data :: proc() -> EventSub(None)
+{
+    return {}
+}
+
+new_sub_poly_data :: proc($T: typeid) -> EventSub(T)
+{
+    return {}
+}
+
 signal_no_data :: proc(event: ^Event(None))
 {
     log.debug("Signaling event", event.name)
@@ -117,12 +128,12 @@ test_listen :: proc(t: ^testing.T)
 {
     sub :: proc(e: ^Event($T), cb: proc(T))
     {
-        @(static) subscriber: EventSub(T) = {}
+        @(static) subscriber := EventSub(T){}
         listen(e, &subscriber, cb)
     }
     e := new(^int, "test")
     defer clear(&e)
-    es := EventSub(^int){}
+    es := new_sub(^int)
     x := 0
 
     signal(&e, &x)
@@ -144,12 +155,65 @@ test_listen_no_data :: proc(t: ^testing.T)
     @static x := 0
     e := new("Test")
     defer clear(&e)
+
     listen(&e, proc() {
-        x = 10
+        x += 10
+    })
+
+    ev_sub0 := new_sub()
+    ev_sub1 := EventSub(None){}
+
+    listen(&e, &ev_sub0, proc() {
+        x += 5
+    })
+
+    listen(&e, &ev_sub1, proc() {
+        x += 5
     })
     
     signal(&e)
 
-    testing.expect(t, x == 10)
+    testing.expect(t, x == 20)
 }
 
+@(test)
+test_readme_code :: proc(t: ^testing.T)
+{
+    @static x := 0
+
+    // Create event with and without data
+    my_event_with_data := new(^int, "Event With Data")
+    defer clear(&my_event_with_data)
+    my_event_without_data := new("Event Without Data")
+    defer clear(&my_event_without_data)
+
+    // Add dynamically allocated listener
+    listen(&my_event_with_data, proc(x_ptr: ^int) {
+        x_ptr^ += 1
+    })
+    listen(&my_event_without_data, proc() {
+        x += 1
+    })
+
+    // Add statically allocated listener
+    ev_sub_with_data := new_sub(^int)
+    listen(&my_event_with_data, &ev_sub_with_data, proc(x_ptr: ^int) {
+        x_ptr^ += 1
+    })
+
+    ev_sub_without_data := new_sub()
+    listen(&my_event_without_data, &ev_sub_without_data, proc() {
+        x += 1
+    })
+
+    // When declaring @static event subscribers, the following equivalents can be used
+    @static static_ev_sub_with_data := EventSub(^int){}
+    @static static_ev_sub_without_Data := EventSub(None){}  // the ev.None distinct type marks no data for event
+
+
+    //  Signalling events
+    signal(&my_event_with_data, &x)
+    assert(x == 2)
+    signal(&my_event_without_data)
+    assert(x == 4)
+}
