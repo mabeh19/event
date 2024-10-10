@@ -71,6 +71,18 @@ listen_static :: proc(event: ^Event($T), sub: ^EventSub(T), cb: proc(T))
     list.push_back(&event.subs, sub)
 }
 
+unlisten :: proc(event: ^Event($T), cb: EventCallback(T)) -> (sub: ^EventSub(T), dynamically_allocated: bool)
+{
+    subs := list.iterator_head(event.subs, EventSub(T), "node")
+    for sub in list.iterate_next(&subs) {
+        if sub.cb == cb {
+            list.remove(&event.subs, transmute(^list.Node)sub)
+            return sub, sub.dyn_alloc
+        }
+    }
+
+    return nil, false
+}
 
 new_poly_data :: proc($T: typeid, name: string) -> Event(T)
 {
@@ -210,6 +222,25 @@ test_readme_code :: proc(t: ^testing.T)
     @static static_ev_sub_with_data := EventSub(^int){}
     @static static_ev_sub_without_Data := EventSub(None){}  // the ev.None distinct type marks no data for event
 
+    double :: proc(x_ptr: ^int) {
+        x_ptr^ *= 2
+    }
+    make_big :: proc() {
+        x *= 200
+    }   
+    listen(&my_event_with_data, &static_ev_sub_with_data, double)
+    listen(&my_event_without_data, &static_ev_sub_without_Data, make_big)
+
+    // Listeners can be removed dynamically
+    unlisten(&my_event_with_data, double)
+    unlisten(&my_event_without_data, make_big)
+
+    // unlisten does not free subscribers it self, the user can check the return
+    // value of the function to determine if the value should be freed or not
+    listen(&my_event_without_data, make_big)
+    if mysub, dyn_allocced := unlisten(&my_event_without_data, make_big); dyn_allocced {
+        free(mysub)
+    }
 
     //  Signalling events
     signal(&my_event_with_data, &x)
