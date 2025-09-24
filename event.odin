@@ -84,7 +84,7 @@ unlisten :: proc(event: ^Event($T), cb: EventCallback(T)) -> (sub: ^EventSub(T),
     return nil, false
 }
 
-new_poly_data :: proc($T: typeid, name: string) -> Event(T)
+new_poly_data :: proc "contextless" ($T: typeid, name: string) -> Event(T)
 {
     return Event(T) {
         name = name,
@@ -92,7 +92,7 @@ new_poly_data :: proc($T: typeid, name: string) -> Event(T)
     }
 }
 
-new_no_data :: proc(name: string) -> Event(None)
+new_no_data :: proc "contextless" (name: string) -> Event(None)
 {
     return Event(None) {
         name = name,
