@@ -112,7 +112,6 @@ new_sub_poly_data :: proc($T: typeid) -> EventSub(T)
 
 signal_no_data :: proc(event: ^Event(None))
 {
-    log.debug("Signaling event", event.name)
     subs := list.iterator_head(event.subs, EventSub(None), "node")
     for sub in list.iterate_next(&subs) {
         sub.cb.(proc())()
@@ -121,7 +120,6 @@ signal_no_data :: proc(event: ^Event(None))
 
 signal_poly_data :: proc(event: ^Event($T), data: T)
 {
-    log.debug("Signaling event", event.name)
     subs := list.iterator_head(event.subs, EventSub(T), "node")
     for sub in list.iterate_next(&subs) {
         sub.cb.(proc(T))(data)
